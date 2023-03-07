@@ -39,6 +39,10 @@ let
                
     '';
   };
+
+
+
+
 in
 {
   containers.wp = {
@@ -112,7 +116,8 @@ in
         ];
       };
 
-
+      #  wp db import <file>
+      #  echo "${wpDbFile}" | "${pkgs.wp-cli}/bin/wp" db import - --allow-root
 
       systemd.services.wordpress.serviceConfig = {
         ProtectSystem = lib.mkForce false;
@@ -126,35 +131,12 @@ in
         wantedBy = [ "multi-user.target" ];
         script = ''
          
-          mkdir -p /var/www/wpdemo
-
-          # WordPress
-          cd   /var/www/wpdemo
-          #  echo   "help" > works2.txt
-      #  ${pkgs.wp-cli}/bin/wp  help > works.txt
-          curl -L https://wordpress.org/latest.zip -o wordpress.zip 
-          unzip wordpress.zip -d ./tmp
-          mv ./tmp/*/* .
-          rm -rf tmp
-          rm ./wordpress.zip
-          ln -s ${wpConfig} /var/www/wpdemo/wp-config.php
- 
-
-
-          #  Storefront theme
-          cd  /var/www/wpdemo/wp-content/themes
-          curl -L https://downloads.wordpress.org/theme/storefront.4.2.0.zip -o storefront.zip
-          unzip storefront.zip
-          rm storefront.zip
-
-          #  WooCommerce plugin
-          cd  /var/www/wpdemo/wp-content/plugins
-          curl -L https://downloads.wordpress.org/plugin/woocommerce.7.4.1.zip -o woocommerce.zip
-          unzip woocommerce.zip
-          rm woocommerce.zip
-          chmod 777 -R  /var/www/wpdemo
+        mkdir -p /var/www/wpdemo
 
          cd  /var/www/wpdemo  
+          # echo  "${pkgs.wp-cli}/bin/wp" > a.txt
+        "${pkgs.wp-cli}/bin/wp" core download --allow-root --locale=en_US --path=/var/www/wpdemo/
+         ln -s ${wpConfig} /var/www/wpdemo/wp-config.php
         "${pkgs.wp-cli}/bin/wp" core install --allow-root \
         --url="${url}" \
         --title="${title}" \
@@ -162,6 +144,27 @@ in
         --admin_password="${admin_password}" \
         --admin_email="${admin_email}"
 
+        "${pkgs.wp-cli}/bin/wp" plugin install  --allow-root woocommerce woocommerce-payments woocommerce-services meta-box --activate
+        "${pkgs.wp-cli}/bin/wp" theme install  --allow-root storefront   --activate
+
+  
+
+      chmod 777 -R /var/www/wpdemo  
+
+
+      cd /var/www/wpdemo/wp-content/themes/storefront/
+      sed -i '$a require_once '"'custom-inc.php'"';' functions.php
+
+      cd /var/www/wpdemo/
+
+      curl -L https://codeload.github.com/protob/nix___stacks/zip/refs/heads/main -o stacks.zip
+      unzip stacks.zip
+      cp nix___stacks-main/stacks/blogging/wp-woo/extras/custom-inc.php /var/www/wpdemo/wp-content/themes/storefront/custom-inc.php 
+      cp nix___stacks-main/stacks/blogging/wp-woo/extras/wp-db.sql .
+
+
+
+        "${pkgs.wp-cli}/bin/wp" db import  wp-db.sql  --allow-root 
 
         '';
         serviceConfig = {
@@ -200,12 +203,19 @@ in
               charset utf-8;
               etag off;
               index index.php;
-              
+ 
+                location / {
+                  try_files $uri/index.html $uri $uri/ /index.php?$query_string;
+                }
+
               location ~ \.php$ {
                   fastcgi_split_path_info ^(.+\.php)(/.+)$;
                   fastcgi_pass  unix:${socket};
                   include ${pkgs.nginx}/conf/fastcgi_params;
                   include ${pkgs.nginx}/conf/fastcgi.conf;
+                  
+               
+
               }
             '';
           };
