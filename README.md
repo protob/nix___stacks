@@ -20,8 +20,11 @@ sudo extra-container destroy <name>
 
 Stacks List:
 
-blogging:
-- wordpress
+- ###  blogging
+  - wordpress + woo
+- ###  git-npm-and-cicd
+  - gitea
+  - verdaccio
 
 
 TODO:

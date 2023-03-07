@@ -162,7 +162,9 @@ in
       cp nix___stacks-main/stacks/blogging/wp-woo/extras/custom-inc.php /var/www/wpdemo/wp-content/themes/storefront/custom-inc.php 
       cp nix___stacks-main/stacks/blogging/wp-woo/extras/wp-db.sql .
 
-      "${pkgs.wp-cli}/bin/wp" db import  wp-db.sql  --allow-root 
+      "${pkgs.wp-cli}/bin/wp" wp db export  --allow-root 
+
+      "${pkgs.wp-cli}/bin/wp" db import  --allow-root   wp-db.sql 
 
         '';
         serviceConfig = {
@@ -225,7 +227,7 @@ in
       users.users.${app} = {
         isSystemUser = true;
         createHome = true;
-        home = "/home/wpdemo";
+        home = "/home/${app}";
         group = app;
       };
       users.groups.${app} = { };
